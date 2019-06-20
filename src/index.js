@@ -1,3 +1,4 @@
+import jQuery from 'jquery'
 import $ from 'jquery'
 import './scss/index.scss'
 
@@ -20,6 +21,16 @@ class Model extends EventEmitter {
     this._settings = $.extend({min: 0, max: 10, step: 1, value: 0}, options);
   }
 
+  changeValue(value) {
+    this._settings.value = value;
+    this.emit('valueChanged', value);
+    console.log(this._settings.value);
+  }
+
+  getValue() {
+    return this._settings.value;
+  }
+
   log() {
     console.log(this._settings);
   }
@@ -31,14 +42,37 @@ class View extends EventEmitter {
     this._model = model;
     this._element = $('.slider');
     this._slider = $(`<input type="range" min="${this._model._settings.min}" max="${this._model._settings.max}" step="${this._model._settings.step}" value="${this._model._settings.value}">`);
+    this._display = $(`<input type="number" value="${this._model._settings.value}">`);
 
-    this._slider.on('input', e => this.emit('valueChanged', e.target.value));
+    this._model.on('valueChanged', value => this.createSlider())
+                .on('valueChanged', value => this.createDisplay());
+                
+
+    this._slider.on('input', e => this.emit('sliderChanged', e.target.value));
+                
+    this._display.on('change', e => this.emit('sliderChanged', e.target.value));
+                  
+
+    
   }
 
-  
+  show() {
+    this.createSlider();
+    this.createDisplay();
+  }
 
   createSlider() {
-    this._element.append(this._slider);
+    const value = parseInt(this._model.getValue(), 10);
+    const slider = this._slider;
+    slider.attr('value', value);
+    this._element.append(slider);
+  }
+
+  createDisplay() {
+    const value = parseInt(this._model.getValue(), 10);
+    const display = this._display;
+    display.attr('value', value);
+    this._element.append(display);
   }
 
   log() {
@@ -51,23 +85,30 @@ class Controller {
     this._model = model;
     this._view = view;
 
-    view.on('valueChanged', value => this._model._settings.value = value);
+    view.on('sliderChanged', value => this._model.changeValue(value));
   }
 
-  getValue() {
-    console.log(this._model._settings.value);
-  }
+  
 }
 
-const model = new Model({value: 3})
-const view = new View(model)
-const controller = new Controller(model, view)
-model.log();
-view.log();
-view.createSlider();
-controller.getValue();
 
 
+(function( $ ) {
 
+  const model = new Model(),
+        view = new View(model),
+        controller = new Controller(model, view);
+
+  
+  
+
+  $.fn.myPlugin = function() {
+  
+      return this.each(() => view.show());
+
+  };
+})(jQuery);
+
+$('.slider').myPlugin();
 
 
